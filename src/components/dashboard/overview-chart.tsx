@@ -1,59 +1,62 @@
 'use client';
 
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useEffect, useState } from 'react';
+import { Skeleton } from '../ui/skeleton';
 
-const data = [
-  {
-    name: 'Jan',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Fev',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Mar',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Abr',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Mai',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Jun',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Jul',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Ago',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Set',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Out',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Nov',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Dez',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-];
+type ChartData = {
+  name: string;
+  total: number;
+}[];
+
+const fetchRevenueData = async (): Promise<ChartData> => {
+  const installmentsSnapshot = await getDocs(
+    query(collection(db, 'installments'), where('status', '==', 'Pago'))
+  );
+
+  const monthlyRevenue: { [key: number]: number } = {};
+
+  installmentsSnapshot.forEach((doc) => {
+    const installment = doc.data();
+    const date = new Date(installment.dueDate + 'T00:00:00'); // Assume UTC
+    const month = date.getMonth();
+    const value = installment.value;
+
+    if (monthlyRevenue[month]) {
+      monthlyRevenue[month] += value;
+    } else {
+      monthlyRevenue[month] = value;
+    }
+  });
+
+  const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  
+  const chartData = monthNames.map((name, index) => ({
+    name: name,
+    total: monthlyRevenue[index] || 0,
+  }));
+  
+  return chartData;
+};
+
 
 export function OverviewChart() {
+  const [data, setData] = useState<ChartData | null>(null);
+
+  useEffect(() => {
+    fetchRevenueData().then(setData);
+  }, []);
+
+  if (!data) {
+    return (
+      <div className="flex h-[350px] w-full items-center justify-center">
+         <Skeleton className="h-[300px] w-[95%]" />
+      </div>
+    );
+  }
+
   return (
     <ResponsiveContainer width="100%" height={350}>
       <BarChart data={data}>

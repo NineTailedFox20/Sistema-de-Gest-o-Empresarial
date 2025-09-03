@@ -9,8 +9,45 @@ import { DollarSign, Users, CreditCard, Activity } from 'lucide-react';
 import { OverviewChart } from '@/components/dashboard/overview-chart';
 import { StatusChart } from '@/components/dashboard/status-chart';
 import { RevenueForecast } from '@/components/dashboard/revenue-forecast';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
-export default function DashboardPage() {
+async function getDashboardData() {
+    const clientsSnapshot = await getDocs(collection(db, 'clients'));
+    const installmentsSnapshot = await getDocs(collection(db, 'installments'));
+
+    const totalClients = clientsSnapshot.size;
+    const totalRevenue = clientsSnapshot.docs.reduce((sum, doc) => sum + (doc.data().totalValue || 0), 0);
+    
+    const paidInstallmentsSnapshot = await getDocs(query(collection(db, 'installments'), where('status', '==', 'Pago')));
+    const totalSales = paidInstallmentsSnapshot.size;
+
+    // "Ativos Agora" is ambiguous, so we'll use active clients for now.
+    const activeClientsSnapshot = await getDocs(query(collection(db, 'clients'), where('status', '==', 'Ativo')));
+    const activeNow = activeClientsSnapshot.size;
+    
+    // Placeholder percentage changes
+    const revenueChange = "+20.1%";
+    const clientsChange = "+180.1%";
+    const salesChange = "+19%";
+    const activeNowChange = "+201";
+
+
+    return {
+        totalRevenue,
+        totalClients,
+        totalSales,
+        activeNow,
+        revenueChange,
+        clientsChange,
+        salesChange,
+        activeNowChange
+    }
+}
+
+
+export default async function DashboardPage() {
+  const data = await getDashboardData();
   return (
     <div className="space-y-6">
       <h1 className="font-headline text-3xl font-bold">Dashboard</h1>
@@ -23,9 +60,14 @@ export default function DashboardPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$45.231,89</div>
+            <div className="text-2xl font-bold">
+                 {data.totalRevenue.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                  })}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +20.1% em relação ao mês passado
+              {data.revenueChange} em relação ao mês passado
             </p>
           </CardContent>
         </Card>
@@ -35,9 +77,9 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+2350</div>
+            <div className="text-2xl font-bold">+{data.totalClients}</div>
             <p className="text-xs text-muted-foreground">
-              +180.1% em relação ao mês passado
+              {data.clientsChange} em relação ao mês passado
             </p>
           </CardContent>
         </Card>
@@ -47,21 +89,21 @@ export default function DashboardPage() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+12,234</div>
+            <div className="text-2xl font-bold">+{data.totalSales}</div>
             <p className="text-xs text-muted-foreground">
-              +19% em relação ao mês passado
+              {data.salesChange} em relação ao mês passado
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ativos Agora</CardTitle>
+            <CardTitle className="text-sm font-medium">Clientes Ativos</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+573</div>
+            <div className="text-2xl font-bold">+{data.activeNow}</div>
             <p className="text-xs text-muted-foreground">
-              +201 desde a última hora
+              Total de clientes com status ativo
             </p>
           </CardContent>
         </Card>
