@@ -74,20 +74,16 @@ export default function UsersPage() {
       if (querySnapshot.empty) {
         try {
           const password = '@Felipe7w7';
-          // This will fail if the user already exists in auth, but not in firestore.
-          // We catch this to prevent unhandled promise rejections.
           const userCredential = await createUserWithEmailAndPassword(auth, ownerEmail, password).catch(
             (err) => {
               if (err.code !== 'auth/email-already-in-use') {
                 console.error("Error creating auth user for owner:", err);
               }
-              // Return null if user exists or another error occurs
               return null;
             }
           );
           
-          // Only proceed if user was newly created in auth.
-          if (userCredential && userCredential.user && userCredential.user.uid) {
+          if (userCredential?.user?.uid) {
             const newUserData: Omit<User, 'id'> = {
               name: 'Felipe (Dono)',
               email: ownerEmail,
@@ -137,7 +133,7 @@ export default function UsersPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
       
-      if (!userCredential || !userCredential.user || !userCredential.user.uid) {
+      if (!userCredential?.user?.uid) {
          throw new Error("Falha ao criar o usuário no Firebase Auth.");
       }
 
@@ -190,14 +186,23 @@ export default function UsersPage() {
   
   const deleteUser = async (userId: string) => {
     try {
-      const userName = users.find(u => u.id === userId)?.name;
-      // Note: This only deletes from Firestore. Deleting from Firebase Auth
-      // requires admin privileges and is typically done from a backend.
+      const userToDelete = users.find(u => u.id === userId);
+      if (!userToDelete) return;
+
+      if(userToDelete.role === 'Dono'){
+          toast({
+              title: 'Ação Proibida!',
+              description: 'Não é possível remover o usuário Dono.',
+              variant: 'destructive',
+          });
+          return;
+      }
+      
       await deleteDoc(doc(db, 'users', userId));
       setUsers(users.filter((user) => user.id !== userId));
       toast({
         title: 'Usuário Removido!',
-        description: `${userName} foi removido do sistema.`,
+        description: `${userToDelete.name} foi removido do sistema.`,
         variant: 'destructive',
       });
     } catch (error) {
@@ -249,7 +254,7 @@ export default function UsersPage() {
                         <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{user.name} {user.role === 'Dono' && '(Dono)'}</p>
+                        <p className="font-medium">{user.name}</p>
                         <p className="text-sm text-muted-foreground">
                           {user.email}
                         </p>
@@ -314,3 +319,5 @@ export default function UsersPage() {
     </div>
   );
 }
+
+    

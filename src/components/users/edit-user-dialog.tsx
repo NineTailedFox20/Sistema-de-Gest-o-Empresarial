@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -65,7 +66,7 @@ export function EditUserDialog({ user, onEditUser }: EditUserDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" className="w-full justify-start text-sm font-normal h-8 px-2">
+        <Button variant="ghost" className="w-full justify-start text-sm font-normal h-8 px-2" disabled={user.role === 'Dono'}>
           Editar Usuário
         </Button>
       </DialogTrigger>
@@ -98,7 +99,7 @@ export function EditUserDialog({ user, onEditUser }: EditUserDialogProps) {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="usuario@exemplo.com" {...field} />
+                    <Input type="email" placeholder="usuario@exemplo.com" {...field} disabled />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -120,7 +121,7 @@ export function EditUserDialog({ user, onEditUser }: EditUserDialogProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Dono">Dono</SelectItem>
+                      <SelectItem value="Dono" disabled>Dono</SelectItem>
                       <SelectItem value="Funcionário">Funcionário</SelectItem>
                       <SelectItem value="Vendedor">Vendedor</SelectItem>
                       <SelectItem value="Usuário">Usuário</SelectItem>
@@ -139,3 +140,5 @@ export function EditUserDialog({ user, onEditUser }: EditUserDialogProps) {
     </Dialog>
   );
 }
+
+    
