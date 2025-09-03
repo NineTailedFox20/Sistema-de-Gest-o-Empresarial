@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -27,45 +28,21 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AddUserDialog, UserFormValues } from '@/components/users/add-user-dialog';
 import { EditUserDialog } from '@/components/users/edit-user-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
-
-const initialUsers = [
-  {
-    id: 'USR-001',
-    name: 'Alice Johnson',
-    email: 'alice.j@example.com',
-    role: 'Dono',
-    avatar: '1',
-  },
-  {
-    id: 'USR-002',
-    name: 'Bob Williams',
-    email: 'bob.w@example.com',
-    role: 'Funcionário',
-    avatar: '2',
-  },
-  {
-    id: 'USR-003',
-    name: 'Charlie Brown',
-    email: 'charlie.b@example.com',
-    role: 'Vendedor',
-    avatar: '3',
-  },
-  {
-    id: 'USR-004',
-    name: 'Diana Miller',
-    email: 'diana.m@example.com',
-    role: 'Usuário',
-    avatar: '4',
-  },
-];
-
-export type User = typeof initialUsers[0];
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: 'Dono' | 'Funcionário' | 'Vendedor' | 'Usuário';
+  avatar: string;
+};
 export type UserRole = 'Dono' | 'Funcionário' | 'Vendedor' | 'Usuário';
 
 const getRoleVariant = (role: string) => {
@@ -82,44 +59,75 @@ const getRoleVariant = (role: string) => {
 };
 
 export default function UsersPage() {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
   const { toast } = useToast();
 
-  const addUser = (userData: UserFormValues) => {
-    const newId = `USR-${(
-      Math.max(0, ...users.map((u) => parseInt(u.id.split('-')[1]))) + 1
-    )
-      .toString()
-      .padStart(3, '0')}`;
-    
-    const newUser: User = {
-      id: newId,
-      ...userData,
-      avatar: (Math.floor(Math.random() * 100) + 1).toString(),
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const q = query(collection(db, 'users'));
+      const querySnapshot = await getDocs(q);
+      const usersData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
+      setUsers(usersData);
     };
-    setUsers([...users, newUser]);
-    toast({
-      title: 'Usuário Adicionado!',
-      description: `${newUser.name} foi adicionado ao sistema.`,
-    });
+    fetchUsers();
+  }, []);
+
+  const addUser = async (userData: UserFormValues) => {
+    try {
+      const newUser = {
+        ...userData,
+        avatar: (Math.floor(Math.random() * 100) + 1).toString(),
+      };
+      const docRef = await addDoc(collection(db, 'users'), newUser);
+      setUsers([...users, { id: docRef.id, ...newUser }]);
+      toast({
+        title: 'Usuário Adicionado!',
+        description: `${newUser.name} foi adicionado ao sistema.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro!',
+        description: 'Não foi possível adicionar o usuário.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const editUser = (updatedUser: User) => {
-    setUsers(users.map((user) => (user.id === updatedUser.id ? updatedUser : user)));
-    toast({
-      title: 'Usuário Atualizado!',
-      description: `As informações de ${updatedUser.name} foram atualizadas.`,
-    });
+  const editUser = async (updatedUser: User) => {
+    try {
+      const userRef = doc(db, 'users', updatedUser.id);
+      await updateDoc(userRef, { ...updatedUser });
+      setUsers(users.map((user) => (user.id === updatedUser.id ? updatedUser : user)));
+      toast({
+        title: 'Usuário Atualizado!',
+        description: `As informações de ${updatedUser.name} foram atualizadas.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro!',
+        description: 'Não foi possível atualizar o usuário.',
+        variant: 'destructive',
+      });
+    }
   };
   
-  const deleteUser = (userId: string) => {
-    const userName = users.find(u => u.id === userId)?.name;
-    setUsers(users.filter((user) => user.id !== userId));
-     toast({
-      title: 'Usuário Removido!',
-      description: `${userName} foi removido do sistema.`,
-      variant: 'destructive',
-    });
+  const deleteUser = async (userId: string) => {
+    try {
+      const userName = users.find(u => u.id === userId)?.name;
+      await deleteDoc(doc(db, 'users', userId));
+      setUsers(users.filter((user) => user.id !== userId));
+      toast({
+        title: 'Usuário Removido!',
+        description: `${userName} foi removido do sistema.`,
+        variant: 'destructive',
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro!',
+        description: 'Não foi possível remover o usuário.',
+        variant: 'destructive',
+      });
+    }
   }
 
   return (

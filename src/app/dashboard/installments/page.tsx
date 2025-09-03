@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Card,
@@ -24,7 +25,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MoreHorizontal } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AddInstallmentDialog, AddInstallmentForm } from '@/components/installments/add-installment-dialog';
 import { EditInstallmentDialog } from '@/components/installments/edit-installment-dialog';
@@ -40,53 +41,16 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
-const initialInstallments = [
-  {
-    id: 'PAR-001',
-    client: 'João da Silva',
-    value: 150.0,
-    dueDate: '2024-07-30',
-    status: 'Pago',
-  },
-  {
-    id: 'PAR-002',
-    client: 'Maria Oliveira',
-    value: 200.5,
-    dueDate: '2024-08-05',
-    status: 'Pendente',
-  },
-  {
-    id: 'PAR-003',
-    client: 'Carlos Pereira',
-    value: 75.25,
-    dueDate: '2024-06-15',
-    status: 'Não Pago',
-  },
-  {
-    id: 'PAR-004',
-    client: 'Ana Costa',
-    value: 300.0,
-    dueDate: '2024-08-10',
-    status: 'Pendente',
-  },
-  {
-    id: 'PAR-005',
-    client: 'Pedro Martins',
-    value: 50.0,
-    dueDate: '2024-07-25',
-    status: 'Pago',
-  },
-  {
-    id: 'PAR-006',
-    client: 'João da Silva',
-    value: 150.0,
-    dueDate: '2024-08-30',
-    status: 'Pendente',
-  },
-];
-
-export type Installment = typeof initialInstallments[0];
+export type Installment = {
+  id: string;
+  client: string;
+  value: number;
+  dueDate: string;
+  status: string;
+};
 
 const getStatusVariant = (status: string) => {
   switch (status) {
@@ -104,56 +68,91 @@ const getStatusVariant = (status: string) => {
 function InstallmentsTable() {
   const searchParams = useSearchParams();
   const clientFilter = searchParams.get('client');
-  const [installments, setInstallments] = useState(initialInstallments);
+  const [installments, setInstallments] = useState<Installment[]>([]);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchInstallments = async () => {
+      let q;
+      if (clientFilter) {
+        q = query(collection(db, 'installments'), where('client', '==', clientFilter));
+      } else {
+        q = query(collection(db, 'installments'));
+      }
+      const querySnapshot = await getDocs(q);
+      const installmentsData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Installment));
+      setInstallments(installmentsData);
+    };
+    fetchInstallments();
+  }, [clientFilter]);
 
   const filteredInstallments = clientFilter
     ? installments.filter((i) => i.client === clientFilter)
     : installments;
 
-  const addInstallment = (installmentData: AddInstallmentForm) => {
-     const newId = `PAR-${(
-      Math.max(0, ...installments.map((i) => parseInt(i.id.split('-')[1]))) + 1
-    )
-      .toString()
-      .padStart(3, '0')}`;
-      
-    const newInstallment: Installment = {
-        id: newId,
+  const addInstallment = async (installmentData: AddInstallmentForm) => {
+    try {
+      const newInstallmentData = {
         ...installmentData,
         dueDate: installmentData.dueDate.toISOString().split('T')[0],
-    };
-
-    setInstallments([...installments, newInstallment]);
-    toast({
-      title: 'Parcela Adicionada!',
-      description: `A parcela para ${newInstallment.client} foi adicionada.`,
-    });
+      };
+      const docRef = await addDoc(collection(db, 'installments'), newInstallmentData);
+      setInstallments([...installments, { id: docRef.id, ...newInstallmentData }]);
+      toast({
+        title: 'Parcela Adicionada!',
+        description: `A parcela para ${newInstallmentData.client} foi adicionada.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro!',
+        description: 'Não foi possível adicionar a parcela.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const editInstallment = (updatedInstallment: Installment) => {
-    setInstallments(
-      installments.map((installment) =>
-        installment.id === updatedInstallment.id
-          ? updatedInstallment
-          : installment
-      )
-    );
-    toast({
-      title: 'Parcela Atualizada!',
-      description: `A parcela ${updatedInstallment.id} foi atualizada.`,
-    });
+  const editInstallment = async (updatedInstallment: Installment) => {
+    try {
+      const installmentRef = doc(db, 'installments', updatedInstallment.id);
+      await updateDoc(installmentRef, { ...updatedInstallment });
+      setInstallments(
+        installments.map((installment) =>
+          installment.id === updatedInstallment.id
+            ? updatedInstallment
+            : installment
+        )
+      );
+      toast({
+        title: 'Parcela Atualizada!',
+        description: `A parcela ${updatedInstallment.id} foi atualizada.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro!',
+        description: 'Não foi possível atualizar a parcela.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const deleteInstallment = (id: string) => {
-    const installmentClient = installments.find(i => i.id === id)?.client;
-    setInstallments(installments.filter((installment) => installment.id !== id));
-    toast({
-      title: 'Parcela Removida!',
-      description: `A parcela de ${installmentClient} foi removida com sucesso.`,
-      variant: 'destructive',
-    });
+  const deleteInstallment = async (id: string) => {
+    try {
+      const installmentClient = installments.find(i => i.id === id)?.client;
+      await deleteDoc(doc(db, 'installments', id));
+      setInstallments(installments.filter((installment) => installment.id !== id));
+      toast({
+        title: 'Parcela Removida!',
+        description: `A parcela de ${installmentClient} foi removida com sucesso.`,
+        variant: 'destructive',
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro!',
+        description: 'Não foi possível remover a parcela.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleSelectRow = (id: string) => {

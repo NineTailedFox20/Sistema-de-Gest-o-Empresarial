@@ -28,7 +28,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,134 +41,102 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
-const initialClients = [
-  {
-    id: 'CLI-001',
-    name: 'João da Silva',
-    email: 'joao.silva@example.com',
-    status: 'Ativo',
-    cpf: '123.456.789-00',
-    phone: '(11) 98765-4321',
-    address: 'Rua das Flores, 123',
-    number: '123',
-    neighborhood: 'Centro',
-    zip: '12345-678',
-    reference: 'Perto do mercado',
-    totalInstallments: 2,
-    totalValue: 300.0,
-  },
-  {
-    id: 'CLI-002',
-    name: 'Maria Oliveira',
-    email: 'maria.oliveira@example.com',
-    status: 'Ativo',
-    cpf: '234.567.890-11',
-    phone: '(21) 91234-5678',
-    address: 'Avenida Brasil, 456',
-    number: '456',
-    neighborhood: 'Copacabana',
-    zip: '23456-789',
-    reference: '',
-    totalInstallments: 1,
-    totalValue: 200.5,
-  },
-  {
-    id: 'CLI-003',
-    name: 'Carlos Pereira',
-    email: 'carlos.pereira@example.com',
-    status: 'Inativo',
-    cpf: '345.678.901-22',
-    phone: '(31) 95678-1234',
-    address: 'Praça da Liberdade, 789',
-    number: '789',
-    neighborhood: 'Savassi',
-    zip: '34567-890',
-    reference: 'Em frente à fonte',
-    totalInstallments: 1,
-    totalValue: 75.25,
-  },
-  {
-    id: 'CLI-004',
-    name: 'Ana Costa',
-    email: 'ana.costa@example.com',
-    status: 'Ativo',
-    cpf: '456.789.012-33',
-    phone: '(41) 98765-8765',
-    address: 'Rua 24 Horas, 101',
-    number: '101',
-    neighborhood: 'Batel',
-    zip: '45678-901',
-    reference: '',
-    totalInstallments: 1,
-    totalValue: 300.0,
-  },
-  {
-    id: 'CLI-005',
-    name: 'Pedro Martins',
-    email: 'pedro.martins@example.com',
-    status: 'Pendente',
-    cpf: '567.890.123-44',
-    phone: '(51) 94321-9876',
-    address: 'Avenida Ipiranga, 202',
-    number: '202',
-    neighborhood: 'Cidade Baixa',
-    zip: '56789-012',
-    reference: 'Ao lado da farmácia',
-    totalInstallments: 1,
-    totalValue: 50.0,
-  },
-];
-
-export type Client = typeof initialClients[0];
+export type Client = {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+  cpf: string;
+  phone: string;
+  address: string;
+  number: string;
+  neighborhood: string;
+  zip: string;
+  reference?: string;
+  totalInstallments: number;
+  totalValue: number;
+};
 
 export default function ClientsPage() {
-  const [clients, setClients] = useState(initialClients);
+  const [clients, setClients] = useState<Client[]>([]);
   const { toast } = useToast();
 
-  const addClient = (clientData: ClientFormValues) => {
-    const newId = `CLI-${(
-      Math.max(...clients.map((c) => parseInt(c.id.split('-')[1]))) + 1
-    )
-      .toString()
-      .padStart(3, '0')}`;
-      
-    const newClient: Client = {
-      ...clientData,
-      id: newId,
-      email: `${clientData.name.toLowerCase().replace(/\s/g, '.')}@example.com`,
-      status: 'Ativo',
-      totalInstallments: 0,
-      totalValue: 0,
+  useEffect(() => {
+    const fetchClients = async () => {
+      const q = query(collection(db, 'clients'));
+      const querySnapshot = await getDocs(q);
+      const clientsData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Client));
+      setClients(clientsData);
     };
+    fetchClients();
+  }, []);
 
-    setClients([...clients, newClient]);
-    toast({
-      title: 'Cliente Adicionado!',
-      description: `${newClient.name} foi adicionado com sucesso.`,
-    });
+  const addClient = async (clientData: ClientFormValues) => {
+    try {
+      const newClientData = {
+        ...clientData,
+        email: `${clientData.name.toLowerCase().replace(/\s/g, '.')}@example.com`,
+        status: 'Ativo',
+        totalInstallments: 0,
+        totalValue: 0,
+      };
+      const docRef = await addDoc(collection(db, 'clients'), newClientData);
+      setClients([...clients, { id: docRef.id, ...newClientData }]);
+      toast({
+        title: 'Cliente Adicionado!',
+        description: `${clientData.name} foi adicionado com sucesso.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro!',
+        description: 'Não foi possível adicionar o cliente.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const editClient = (updatedClient: Client) => {
-    setClients(
-      clients.map((client) =>
-        client.id === updatedClient.id ? updatedClient : client
-      )
-    );
-    toast({
-      title: 'Cliente Atualizado!',
-      description: `Os dados de ${updatedClient.name} foram atualizados.`,
-    });
+  const editClient = async (updatedClient: Client) => {
+    try {
+      const clientRef = doc(db, 'clients', updatedClient.id);
+      await updateDoc(clientRef, { ...updatedClient });
+      setClients(
+        clients.map((client) =>
+          client.id === updatedClient.id ? updatedClient : client
+        )
+      );
+      toast({
+        title: 'Cliente Atualizado!',
+        description: `Os dados de ${updatedClient.name} foram atualizados.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro!',
+        description: 'Não foi possível atualizar o cliente.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const deleteClient = (id: string) => {
-    const clientName = clients.find(c => c.id === id)?.name;
-    setClients(clients.filter((client) => client.id !== id));
-    toast({
-      title: 'Cliente Removido!',
-      description: `${clientName} foi removido com sucesso.`,
-      variant: 'destructive',
-    });
+  const deleteClient = async (id: string) => {
+    try {
+      const clientName = clients.find((c) => c.id === id)?.name;
+      await deleteDoc(doc(db, 'clients', id));
+      setClients(clients.filter((client) => client.id !== id));
+      toast({
+        title: 'Cliente Removido!',
+        description: `${clientName} foi removido com sucesso.`,
+        variant: 'destructive',
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro!',
+        description: 'Não foi possível remover o cliente.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
