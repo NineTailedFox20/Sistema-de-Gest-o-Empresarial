@@ -1,0 +1,28 @@
+{
+  "node": {
+    "400732a7a332be95f0eebe244cd50e2d46a37baef1": {
+      "workers": {
+        "app/dashboard/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/ai/flows/generate-revenue-forecast.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/dashboard/page": "action-browser"
+      }
+    },
+    "40635489f34cfb1ac563716cf37f416490ea731523": {
+      "workers": {
+        "app/dashboard/reports/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/reports/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/ai/flows/generate-custom-reports.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/dashboard/reports/page": "action-browser"
+      }
+    }
+  },
+  "edge": {},
+  "encryptionKey": "pEHU8KaC4/z2AKi6TVUONO3HC9FSc+dRTkm6ddOvAu4="
+}
