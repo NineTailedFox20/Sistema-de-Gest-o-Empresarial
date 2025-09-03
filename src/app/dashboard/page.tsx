@@ -41,33 +41,38 @@ export default function DashboardPage() {
         const activeClients = clientsSnapshot.docs.filter(doc => doc.data().status === 'Ativo').length;
 
         setData(prevData => ({
-          ...prevData!,
+          ...(prevData || {
+                totalRevenue: 0,
+                totalClients: 0,
+                totalSales: 0,
+                activeNow: 0,
+                revenueChange: "+20.1%",
+                clientsChange: "+180.1%",
+                salesChange: "+19%",
+            }),
           totalClients,
           totalRevenue,
           activeNow: activeClients,
         }));
+        setLoading(false);
       }),
       onSnapshot(installmentsQuery, (installmentsSnapshot) => {
         const paidInstallments = installmentsSnapshot.docs.filter(doc => doc.data().status === 'Pago').length;
         setData(prevData => ({
-          ...prevData!,
+          ...(prevData || {
+                totalRevenue: 0,
+                totalClients: 0,
+                totalSales: 0,
+                activeNow: 0,
+                revenueChange: "+20.1%",
+                clientsChange: "+180.1%",
+                salesChange: "+19%",
+          }),
           totalSales: paidInstallments,
         }));
+        setLoading(false);
       })
     ];
-    
-    // Set placeholder data and stop loading
-    setData({
-      totalRevenue: 0,
-      totalClients: 0,
-      totalSales: 0,
-      activeNow: 0,
-      revenueChange: "+20.1%",
-      clientsChange: "+180.1%",
-      salesChange: "+19%",
-    });
-    setLoading(false);
-
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, []);
