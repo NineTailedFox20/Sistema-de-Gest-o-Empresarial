@@ -1,4 +1,5 @@
 
+'use client';
 import {
   Card,
   CardContent,
@@ -10,60 +11,131 @@ import { DollarSign, Users, CreditCard, Activity } from 'lucide-react';
 import { OverviewChart } from '@/components/dashboard/overview-chart';
 import { StatusChart } from '@/components/dashboard/status-chart';
 import { RevenueForecast } from '@/components/dashboard/revenue-forecast';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useEffect, useState } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
-async function getDashboardData() {
-  try {
+interface DashboardData {
+  totalRevenue: number;
+  totalClients: number;
+  totalSales: number;
+  activeNow: number;
+  revenueChange: string;
+  clientsChange: string;
+  salesChange: string;
+}
+
+export default function DashboardPage() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
     const clientsQuery = query(collection(db, 'clients'));
     const installmentsQuery = query(collection(db, 'installments'));
-    const activeClientsQuery = query(collection(db, 'clients'), where('status', '==', 'Ativo'));
-    const paidInstallmentsQuery = query(collection(db, 'installments'), where('status', '==', 'Pago'));
 
-    const [clientsSnapshot, installmentsSnapshot, activeClientsSnapshot, paidInstallmentsSnapshot] = await Promise.all([
-        getDocs(clientsQuery),
-        getDocs(installmentsQuery),
-        getDocs(activeClientsQuery),
-        getDocs(paidInstallmentsQuery)
-    ]);
+    const unsubscribes = [
+      onSnapshot(clientsQuery, (clientsSnapshot) => {
+        const totalClients = clientsSnapshot.size;
+        const totalRevenue = clientsSnapshot.docs.reduce((sum, doc) => sum + (doc.data().totalValue || 0), 0);
+        const activeClients = clientsSnapshot.docs.filter(doc => doc.data().status === 'Ativo').length;
 
-    const totalClients = clientsSnapshot.size;
-    const totalRevenue = clientsSnapshot.docs.reduce((sum, doc) => sum + (doc.data().totalValue || 0), 0);
-    const totalSales = paidInstallmentsSnapshot.size;
-    const activeNow = activeClientsSnapshot.size;
-
-    // Placeholder percentage changes
-    const revenueChange = "+20.1%";
-    const clientsChange = "+180.1%";
-    const salesChange = "+19%";
-
-    return {
-      totalRevenue,
-      totalClients,
-      totalSales,
-      activeNow,
-      revenueChange,
-      clientsChange,
-      salesChange,
-    };
-  } catch (error) {
-    console.error("Error fetching dashboard data:", error);
-    // Return default values in case of error
-    return {
+        setData(prevData => ({
+          ...prevData!,
+          totalClients,
+          totalRevenue,
+          activeNow: activeClients,
+        }));
+      }),
+      onSnapshot(installmentsQuery, (installmentsSnapshot) => {
+        const paidInstallments = installmentsSnapshot.docs.filter(doc => doc.data().status === 'Pago').length;
+        setData(prevData => ({
+          ...prevData!,
+          totalSales: paidInstallments,
+        }));
+      })
+    ];
+    
+    // Set placeholder data and stop loading
+    setData({
       totalRevenue: 0,
       totalClients: 0,
       totalSales: 0,
       activeNow: 0,
-      revenueChange: "N/A",
-      clientsChange: "N/A",
-      salesChange: "N/A",
-    };
+      revenueChange: "+20.1%",
+      clientsChange: "+180.1%",
+      salesChange: "+19%",
+    });
+    setLoading(false);
+
+
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, []);
+
+  if (loading || !data) {
+    return (
+        <div className="space-y-6">
+        <h1 className="font-headline text-3xl font-bold">Dashboard</h1>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-8 w-3/4" />
+                    <Skeleton className="h-4 w-1/2 mt-2" />
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Clientes</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-8 w-3/4" />
+                    <Skeleton className="h-4 w-1/2 mt-2" />
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Vendas</CardTitle>
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-8 w-3/4" />
+                    <Skeleton className="h-4 w-1/2 mt-2" />
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Clientes Ativos</CardTitle>
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-8 w-3/4" />
+                    <Skeleton className="h-4 w-1/2 mt-2" />
+                </CardContent>
+            </Card>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <Card className="col-span-4">
+                <CardHeader>
+                    <CardTitle className="font-headline">Visão Geral</CardTitle>
+                </CardHeader>
+                <CardContent className="pl-2">
+                   <Skeleton className="h-[350px] w-full" />
+                </CardContent>
+            </Card>
+            <div className="col-span-4 lg:col-span-3 space-y-4 flex flex-col">
+                <StatusChart />
+                <RevenueForecast />
+            </div>
+        </div>
+        </div>
+    );
   }
-}
 
-
-export default async function DashboardPage() {
-  const data = await getDashboardData();
   return (
     <div className="space-y-6">
       <h1 className="font-headline text-3xl font-bold">Dashboard</h1>

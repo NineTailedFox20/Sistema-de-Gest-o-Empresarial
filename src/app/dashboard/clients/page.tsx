@@ -201,7 +201,7 @@ export default function ClientsPage() {
                       {client.email}
                     </div>
                   </TableCell>
-                  <TableCell className="hidden md-table-cell">
+                  <TableCell className="hidden md:table-cell">
                     {client.cpf}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">

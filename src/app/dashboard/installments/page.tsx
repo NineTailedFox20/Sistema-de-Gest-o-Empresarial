@@ -41,7 +41,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export type Installment = {
@@ -72,20 +72,28 @@ function InstallmentsTable() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchInstallments = async () => {
-      let q;
-      if (clientFilter) {
-        q = query(collection(db, 'installments'), where('client', '==', clientFilter));
-      } else {
-        q = query(collection(db, 'installments'));
-      }
-      const querySnapshot = await getDocs(q);
+ useEffect(() => {
+    let q;
+    if (clientFilter) {
+      q = query(collection(db, 'installments'), where('client', '==', clientFilter));
+    } else {
+      q = query(collection(db, 'installments'));
+    }
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const installmentsData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Installment));
       setInstallments(installmentsData);
-    };
-    fetchInstallments();
-  }, [clientFilter]);
+    }, (error) => {
+      console.error("Error fetching installments: ", error);
+      toast({
+        title: 'Erro!',
+        description: 'Não foi possível carregar as parcelas.',
+        variant: 'destructive',
+      });
+    });
+
+    return () => unsubscribe();
+  }, [clientFilter, toast]);
 
   const filteredInstallments = clientFilter
     ? installments.filter((i) => i.client === clientFilter)
@@ -97,8 +105,7 @@ function InstallmentsTable() {
         ...installmentData,
         dueDate: installmentData.dueDate.toISOString().split('T')[0],
       };
-      const docRef = await addDoc(collection(db, 'installments'), newInstallmentData);
-      setInstallments([...installments, { id: docRef.id, ...newInstallmentData }]);
+      await addDoc(collection(db, 'installments'), newInstallmentData);
       toast({
         title: 'Parcela Adicionada!',
         description: `A parcela para ${newInstallmentData.client} foi adicionada.`,
@@ -115,14 +122,8 @@ function InstallmentsTable() {
   const editInstallment = async (updatedInstallment: Installment) => {
     try {
       const installmentRef = doc(db, 'installments', updatedInstallment.id);
-      await updateDoc(installmentRef, { ...updatedInstallment });
-      setInstallments(
-        installments.map((installment) =>
-          installment.id === updatedInstallment.id
-            ? updatedInstallment
-            : installment
-        )
-      );
+      const { id, ...installmentData } = updatedInstallment;
+      await updateDoc(installmentRef, installmentData);
       toast({
         title: 'Parcela Atualizada!',
         description: `A parcela ${updatedInstallment.id} foi atualizada.`,
@@ -140,7 +141,6 @@ function InstallmentsTable() {
     try {
       const installmentClient = installments.find(i => i.id === id)?.client;
       await deleteDoc(doc(db, 'installments', id));
-      setInstallments(installments.filter((installment) => installment.id !== id));
       toast({
         title: 'Parcela Removida!',
         description: `A parcela de ${installmentClient} foi removida com sucesso.`,
