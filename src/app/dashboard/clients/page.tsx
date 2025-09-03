@@ -156,9 +156,11 @@ export default function ClientsPage() {
 
       const batch = writeBatch(db);
 
+      // Delete the client document
       const clientRef = doc(db, 'clients', id);
       batch.delete(clientRef);
       
+      // Find and delete all associated installments
       const installmentsQuery = query(collection(db, 'installments'), where('client', '==', clientToDelete.name));
       const installmentsSnapshot = await getDocs(installmentsQuery);
       installmentsSnapshot.forEach((installmentDoc) => {
@@ -173,6 +175,7 @@ export default function ClientsPage() {
         variant: 'destructive',
       });
     } catch (error) {
+      console.error("Error removing client and installments: ", error);
       toast({
         title: 'Erro!',
         description: 'Não foi possível remover o cliente e suas parcelas.',
@@ -301,5 +304,3 @@ export default function ClientsPage() {
     </div>
   );
 }
-
-    
