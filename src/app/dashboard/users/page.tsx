@@ -74,15 +74,19 @@ export default function UsersPage() {
       if (querySnapshot.empty) {
         try {
           const password = '@Felipe7w7';
+          // This will fail if the user already exists in auth, but not in firestore.
+          // We catch this to prevent unhandled promise rejections.
           const userCredential = await createUserWithEmailAndPassword(auth, ownerEmail, password).catch(
             (err) => {
-              if(err.code !== 'auth/email-already-in-use') {
-                throw err;
+              if (err.code !== 'auth/email-already-in-use') {
+                console.error("Error creating auth user for owner:", err);
               }
+              // Return null if user exists or another error occurs
               return null;
             }
           );
           
+          // Only proceed if user was newly created in auth.
           if (userCredential && userCredential.user && userCredential.user.uid) {
             const newUserData: Omit<User, 'id'> = {
               name: 'Felipe (Dono)',
@@ -100,7 +104,7 @@ export default function UsersPage() {
             });
           }
         } catch (error) {
-            console.error("Error seeding owner: ", error);
+            console.error("Error seeding owner in firestore: ", error);
              toast({
                 title: 'Erro ao Criar Dono!',
                 description: 'Não foi possível criar o usuário dono padrão.',
@@ -112,10 +116,19 @@ export default function UsersPage() {
     
     const fetchUsers = async () => {
       await seedOwner();
-      const q = query(collection(db, 'users'));
-      const querySnapshot = await getDocs(q);
-      const usersData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
-      setUsers(usersData);
+      try {
+        const q = query(collection(db, 'users'));
+        const querySnapshot = await getDocs(q);
+        const usersData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
+        setUsers(usersData);
+      } catch (error) {
+         console.error("Error fetching users:", error);
+         toast({
+            title: 'Erro ao buscar usuários!',
+            description: 'Não foi possível carregar a lista de usuários.',
+            variant: 'destructive',
+        });
+      }
     };
     fetchUsers();
   }, [toast]);
@@ -123,27 +136,31 @@ export default function UsersPage() {
   const addUser = async (userData: UserFormValues) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
-      if (userCredential && userCredential.user && userCredential.user.uid) {
-        const newUser: Omit<User, 'id'> = {
-          name: userData.name,
-          email: userData.email,
-          role: userData.role,
-          avatar: (Math.floor(Math.random() * 100) + 1).toString(),
-          uid: userCredential.user.uid,
-        };
-        const docRef = await addDoc(collection(db, 'users'), newUser);
-        setUsers([...users, { id: docRef.id, ...newUser }]);
-        toast({
-          title: 'Usuário Adicionado!',
-          description: `${newUser.name} foi adicionado ao sistema.`,
-        });
-      } else {
-        throw new Error("Falha ao criar o usuário no Firebase Auth.");
+      
+      if (!userCredential || !userCredential.user || !userCredential.user.uid) {
+         throw new Error("Falha ao criar o usuário no Firebase Auth.");
       }
+
+      const newUser: Omit<User, 'id'> = {
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        avatar: (Math.floor(Math.random() * 100) + 1).toString(),
+        uid: userCredential.user.uid,
+      };
+
+      const docRef = await addDoc(collection(db, 'users'), newUser);
+      setUsers([...users, { id: docRef.id, ...newUser }]);
+      toast({
+        title: 'Usuário Adicionado!',
+        description: `${newUser.name} foi adicionado ao sistema.`,
+      });
     } catch (error: any) {
       let errorMessage = 'Não foi possível adicionar o usuário.';
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'Este email já está em uso por outra conta.';
+      } else {
+        console.error("Error adding user:", error);
       }
        toast({
         title: 'Erro!',

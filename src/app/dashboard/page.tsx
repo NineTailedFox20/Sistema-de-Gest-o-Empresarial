@@ -1,3 +1,4 @@
+
 import {
   Card,
   CardContent,
@@ -13,36 +14,51 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 async function getDashboardData() {
-    const clientsSnapshot = await getDocs(collection(db, 'clients'));
-    const installmentsSnapshot = await getDocs(collection(db, 'installments'));
+  try {
+    const clientsQuery = query(collection(db, 'clients'));
+    const installmentsQuery = query(collection(db, 'installments'));
+    const activeClientsQuery = query(collection(db, 'clients'), where('status', '==', 'Ativo'));
+    const paidInstallmentsQuery = query(collection(db, 'installments'), where('status', '==', 'Pago'));
+
+    const [clientsSnapshot, installmentsSnapshot, activeClientsSnapshot, paidInstallmentsSnapshot] = await Promise.all([
+        getDocs(clientsQuery),
+        getDocs(installmentsQuery),
+        getDocs(activeClientsQuery),
+        getDocs(paidInstallmentsSnapshot)
+    ]);
 
     const totalClients = clientsSnapshot.size;
     const totalRevenue = clientsSnapshot.docs.reduce((sum, doc) => sum + (doc.data().totalValue || 0), 0);
-    
-    const paidInstallmentsSnapshot = await getDocs(query(collection(db, 'installments'), where('status', '==', 'Pago')));
     const totalSales = paidInstallmentsSnapshot.size;
-
-    // "Ativos Agora" is ambiguous, so we'll use active clients for now.
-    const activeClientsSnapshot = await getDocs(query(collection(db, 'clients'), where('status', '==', 'Ativo')));
     const activeNow = activeClientsSnapshot.size;
-    
+
     // Placeholder percentage changes
     const revenueChange = "+20.1%";
     const clientsChange = "+180.1%";
     const salesChange = "+19%";
-    const activeNowChange = "+201";
-
 
     return {
-        totalRevenue,
-        totalClients,
-        totalSales,
-        activeNow,
-        revenueChange,
-        clientsChange,
-        salesChange,
-        activeNowChange
-    }
+      totalRevenue,
+      totalClients,
+      totalSales,
+      activeNow,
+      revenueChange,
+      clientsChange,
+      salesChange,
+    };
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+    // Return default values in case of error
+    return {
+      totalRevenue: 0,
+      totalClients: 0,
+      totalSales: 0,
+      activeNow: 0,
+      revenueChange: "N/A",
+      clientsChange: "N/A",
+      salesChange: "N/A",
+    };
+  }
 }
 
 
