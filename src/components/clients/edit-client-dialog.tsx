@@ -12,8 +12,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { PlusCircle } from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -26,6 +24,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState } from 'react';
+import type { Client } from '@/app/dashboard/clients/page';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'O nome deve ter pelo menos 2 caracteres.' }),
@@ -38,50 +37,47 @@ const formSchema = z.object({
   reference: z.string().optional(),
 });
 
-export type ClientFormValues = z.infer<typeof formSchema>;
+type EditClientFormValues = z.infer<typeof formSchema>;
 
-interface AddClientDialogProps {
-  onAddClient: (values: ClientFormValues) => void;
+interface EditClientDialogProps {
+  client: Client;
+  onEditClient: (client: Client) => void;
 }
 
-export function AddClientDialog({ onAddClient }: AddClientDialogProps) {
+export function EditClientDialog({ client, onEditClient }: EditClientDialogProps) {
   const [open, setOpen] = useState(false);
 
-  const form = useForm<ClientFormValues>({
+  const form = useForm<EditClientFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      cpf: '',
-      phone: '',
-      address: '',
-      number: '',
-      neighborhood: '',
-      zip: '',
-      reference: '',
+      name: client.name,
+      cpf: client.cpf,
+      phone: client.phone,
+      address: client.address,
+      number: client.number,
+      neighborhood: client.neighborhood,
+      zip: client.zip,
+      reference: client.reference,
     },
   });
 
-  function onSubmit(values: ClientFormValues) {
-    onAddClient(values);
+  function onSubmit(values: EditClientFormValues) {
+    onEditClient({ ...client, ...values });
     setOpen(false);
-    form.reset();
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="h-8 gap-1">
-          <PlusCircle className="h-3.5 w-3.5" />
-          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-            Adicionar Cliente
-          </span>
+        <Button variant="ghost" className="w-full justify-start text-sm font-normal h-8 px-2">
+          Editar
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
-          <DialogTitle className="font-headline">Adicionar Novo Cliente</DialogTitle>
+          <DialogTitle className="font-headline">Editar Cliente</DialogTitle>
           <DialogDescription>
-            Preencha as informações do novo cliente.
+            Atualize as informações de {client.name}.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -201,7 +197,7 @@ export function AddClientDialog({ onAddClient }: AddClientDialogProps) {
                 )}
             />
             <DialogFooter>
-                <Button type="submit">Salvar Cliente</Button>
+                <Button type="submit">Salvar Alterações</Button>
             </DialogFooter>
           </form>
         </Form>
