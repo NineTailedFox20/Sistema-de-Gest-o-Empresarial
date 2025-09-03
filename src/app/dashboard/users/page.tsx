@@ -43,6 +43,7 @@ export type User = {
   email: string;
   role: 'Dono' | 'Funcionário' | 'Vendedor' | 'Usuário';
   avatar: string;
+  uid?: string;
 };
 export type UserRole = 'Dono' | 'Funcionário' | 'Vendedor' | 'Usuário';
 
@@ -82,8 +83,8 @@ export default function UsersPage() {
             }
           );
           
-          if (userCredential?.user?.uid) {
-            const newUserData: Omit<User, 'id'> & {uid: string} = {
+          if (userCredential && userCredential.user && userCredential.user.uid) {
+            const newUserData: Omit<User, 'id'> = {
               name: 'Felipe (Dono)',
               email: ownerEmail,
               role: 'Dono' as UserRole,
@@ -92,7 +93,7 @@ export default function UsersPage() {
             };
             
             const docRef = await addDoc(usersRef, newUserData);
-            setUsers(prevUsers => [...prevUsers, {id: docRef.id, ...newUserData} as User]);
+            setUsers(prevUsers => [...prevUsers, {id: docRef.id, ...newUserData}]);
             toast({
               title: 'Usuário Dono Criado!',
               description: `O usuário Dono padrão foi configurado.`,
@@ -117,13 +118,13 @@ export default function UsersPage() {
       setUsers(usersData);
     };
     fetchUsers();
-  }, []);
+  }, [toast]);
 
   const addUser = async (userData: UserFormValues) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
-      if (userCredential.user) {
-        const newUser = {
+      if (userCredential && userCredential.user && userCredential.user.uid) {
+        const newUser: Omit<User, 'id'> = {
           name: userData.name,
           email: userData.email,
           role: userData.role,
@@ -136,6 +137,8 @@ export default function UsersPage() {
           title: 'Usuário Adicionado!',
           description: `${newUser.name} foi adicionado ao sistema.`,
         });
+      } else {
+        throw new Error("Falha ao criar o usuário no Firebase Auth.");
       }
     } catch (error: any) {
       let errorMessage = 'Não foi possível adicionar o usuário.';
@@ -294,5 +297,3 @@ export default function UsersPage() {
     </div>
   );
 }
-
-    

@@ -33,9 +33,9 @@ export default function RegisterPage() {
     setError('');
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      if (user) {
+      
+      if (userCredential && userCredential.user && userCredential.user.uid) {
+        const user = userCredential.user;
         // Add user to 'users' collection in Firestore
         await addDoc(collection(db, 'users'), {
           uid: user.uid,
@@ -50,13 +50,19 @@ export default function RegisterPage() {
           description: 'Sua conta foi criada. Você será redirecionado.',
         });
         router.push('/dashboard');
+      } else {
+        throw new Error("Falha ao obter o UID do usuário durante o registro.");
       }
 
     } catch (err: any) {
-      setError(err.message);
+      let errorMessage = 'Não foi possível criar a conta. Tente novamente.';
+      if (err.code === 'auth/email-already-in-use') {
+        errorMessage = 'Este email já está em uso por outra conta.';
+      }
+      setError(errorMessage);
       toast({
         title: 'Erro no Registro',
-        description: 'Não foi possível criar a conta. Tente novamente.',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
