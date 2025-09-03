@@ -35,7 +35,7 @@ import type { User, UserRole } from '@/app/dashboard/users/page';
 const formSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
   email: z.string().email({ message: 'Por favor, insira um email válido.' }),
-  role: z.enum(['Funcionário', 'Vendedor', 'Usuário']),
+  role: z.enum(['Dono', 'Funcionário', 'Vendedor', 'Usuário']),
 });
 
 export type EditUserFormValues = z.infer<typeof formSchema>;
@@ -120,6 +120,7 @@ export function EditUserDialog({ user, onEditUser }: EditUserDialogProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="Dono">Dono</SelectItem>
                       <SelectItem value="Funcionário">Funcionário</SelectItem>
                       <SelectItem value="Vendedor">Vendedor</SelectItem>
                       <SelectItem value="Usuário">Usuário</SelectItem>
