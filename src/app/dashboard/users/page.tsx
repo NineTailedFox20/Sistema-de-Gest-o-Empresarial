@@ -87,15 +87,19 @@ export default function UsersPage() {
             }
           );
           
-          const newUserData = {
+          const newUserData: { [key: string]: any } = {
             name: 'Felipe (Dono)',
             email: ownerEmail,
             role: 'Dono' as UserRole,
             avatar: (Math.floor(Math.random() * 100) + 1).toString(),
-            uid: userCredential ? userCredential.user.uid : undefined
           };
+
+          if (userCredential?.user?.uid) {
+            newUserData.uid = userCredential.user.uid;
+          }
+          
           const docRef = await addDoc(usersRef, newUserData);
-          setUsers(prevUsers => [...prevUsers, {id: docRef.id, ...newUserData}]);
+          setUsers(prevUsers => [...prevUsers, {id: docRef.id, ...newUserData} as User]);
           toast({
             title: 'Usuário Dono Criado!',
             description: `O usuário Dono padrão foi configurado.`,
