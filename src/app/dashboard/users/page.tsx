@@ -33,8 +33,9 @@ import { AddUserDialog, UserFormValues } from '@/components/users/add-user-dialo
 import { EditUserDialog } from '@/components/users/edit-user-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, getDoc } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 export type User = {
   id: string;
@@ -63,7 +64,55 @@ export default function UsersPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    const seedOwner = async () => {
+      const ownerEmail = 'ufelpe7w7@gmail.com';
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where("email", "==", ownerEmail));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        try {
+          // Note: This only creates the user in Firestore.
+          // The auth user must be created separately through the registration flow.
+          // For this app, we'll assume the owner registers through the UI.
+          // To properly seed, you'd need a backend function.
+          // We will create the user in auth database as well to make it fully functional.
+          const password = '@Felipe7w7';
+          const userCredential = await createUserWithEmailAndPassword(auth, ownerEmail, password).catch(
+            (err) => {
+              if(err.code !== 'auth/email-already-in-use') {
+                throw err;
+              }
+              return null;
+            }
+          );
+          
+          const newUserData = {
+            name: 'Felipe (Dono)',
+            email: ownerEmail,
+            role: 'Dono' as UserRole,
+            avatar: (Math.floor(Math.random() * 100) + 1).toString(),
+            uid: userCredential ? userCredential.user.uid : undefined
+          };
+          const docRef = await addDoc(usersRef, newUserData);
+          setUsers(prevUsers => [...prevUsers, {id: docRef.id, ...newUserData}]);
+          toast({
+            title: 'Usuário Dono Criado!',
+            description: `O usuário Dono padrão foi configurado.`,
+          });
+        } catch (error) {
+            console.error("Error seeding owner: ", error);
+             toast({
+                title: 'Erro ao Criar Dono!',
+                description: 'Não foi possível criar o usuário dono padrão.',
+                variant: 'destructive',
+            });
+        }
+      }
+    };
+    
     const fetchUsers = async () => {
+      await seedOwner();
       const q = query(collection(db, 'users'));
       const querySnapshot = await getDocs(q);
       const usersData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
@@ -72,11 +121,15 @@ export default function UsersPage() {
     fetchUsers();
   }, []);
 
-  const addUser = async (userData: Omit<UserFormValues, 'password'>) => {
+  const addUser = async (userData: UserFormValues) => {
     try {
+      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
       const newUser = {
-        ...userData,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
         avatar: (Math.floor(Math.random() * 100) + 1).toString(),
+        uid: userCredential.user.uid,
       };
       const docRef = await addDoc(collection(db, 'users'), newUser);
       setUsers([...users, { id: docRef.id, ...newUser }]);
@@ -84,10 +137,14 @@ export default function UsersPage() {
         title: 'Usuário Adicionado!',
         description: `${newUser.name} foi adicionado ao sistema.`,
       });
-    } catch (error) {
-      toast({
+    } catch (error: any) {
+      let errorMessage = 'Não foi possível adicionar o usuário.';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Este email já está em uso por outra conta.';
+      }
+       toast({
         title: 'Erro!',
-        description: 'Não foi possível adicionar o usuário.',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
@@ -114,6 +171,8 @@ export default function UsersPage() {
   const deleteUser = async (userId: string) => {
     try {
       const userName = users.find(u => u.id === userId)?.name;
+      // Note: This only deletes from Firestore. Deleting from Firebase Auth
+      // requires admin privileges and is typically done from a backend.
       await deleteDoc(doc(db, 'users', userId));
       setUsers(users.filter((user) => user.id !== userId));
       toast({
