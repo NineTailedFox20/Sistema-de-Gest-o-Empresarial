@@ -20,11 +20,11 @@ import {
   BadgeCent,
   FileText,
   User,
-  Fox,
 } from 'lucide-react';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
+import { FoxIcon } from '@/components/icons/fox-icon';
 
 const menuItems = [
   {
@@ -64,7 +64,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2 p-2">
             <Button variant="ghost" size="icon" className="shrink-0" asChild>
               <Link href="/dashboard">
-                <Fox className="size-6 text-primary" />
+                <FoxIcon className="size-6 text-primary" />
               </Link>
             </Button>
             <h1 className="font-headline text-2xl font-bold text-primary">

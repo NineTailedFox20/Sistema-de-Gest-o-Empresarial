@@ -9,13 +9,13 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Fox } from 'lucide-react';
+import { FoxIcon } from '@/components/icons/fox-icon';
 
 export default function RegisterPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-secondary p-4">
       <div className="mb-8 flex items-center gap-4 text-primary">
-        <Fox className="h-12 w-12" />
+        <FoxIcon className="h-12 w-12" />
         <h1 className="font-headline text-5xl font-bold">FoxDash</h1>
       </div>
       <Card className="w-full max-w-sm">
