@@ -57,7 +57,7 @@ export function EditClientDialog({ client, onEditClient }: EditClientDialogProps
       number: client.number,
       neighborhood: client.neighborhood,
       zip: client.zip,
-      reference: client.reference,
+      reference: client.reference || '',
     },
   });
 

@@ -28,7 +28,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,7 +41,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, writeBatch, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export type Client = {
@@ -65,14 +65,21 @@ export default function ClientsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchClients = async () => {
-      const q = query(collection(db, 'clients'));
-      const querySnapshot = await getDocs(q);
+    const q = query(collection(db, 'clients'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const clientsData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Client));
       setClients(clientsData);
-    };
-    fetchClients();
-  }, []);
+    }, (error) => {
+      console.error("Error fetching clients: ", error);
+      toast({
+        title: 'Erro!',
+        description: 'Não foi possível carregar os clientes.',
+        variant: 'destructive',
+      });
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
 
   const addClient = async (clientData: ClientFormValues) => {
     try {
@@ -83,8 +90,7 @@ export default function ClientsPage() {
         totalInstallments: 0,
         totalValue: 0,
       };
-      const docRef = await addDoc(collection(db, 'clients'), newClientData);
-      setClients([...clients, { id: docRef.id, ...newClientData }]);
+      await addDoc(collection(db, 'clients'), newClientData);
       toast({
         title: 'Cliente Adicionado!',
         description: `${clientData.name} foi adicionado com sucesso.`,
@@ -101,12 +107,8 @@ export default function ClientsPage() {
   const editClient = async (updatedClient: Client) => {
     try {
       const clientRef = doc(db, 'clients', updatedClient.id);
-      await updateDoc(clientRef, { ...updatedClient });
-      setClients(
-        clients.map((client) =>
-          client.id === updatedClient.id ? updatedClient : client
-        )
-      );
+      const { id, ...clientData } = updatedClient;
+      await updateDoc(clientRef, clientData);
       toast({
         title: 'Cliente Atualizado!',
         description: `Os dados de ${updatedClient.name} foram atualizados.`,
@@ -127,11 +129,9 @@ export default function ClientsPage() {
 
       const batch = writeBatch(db);
 
-      // Delete the client
       const clientRef = doc(db, 'clients', id);
       batch.delete(clientRef);
       
-      // Find and delete associated installments
       const installmentsQuery = query(collection(db, 'installments'), where('client', '==', clientToDelete.name));
       const installmentsSnapshot = await getDocs(installmentsQuery);
       installmentsSnapshot.forEach((installmentDoc) => {
@@ -140,7 +140,6 @@ export default function ClientsPage() {
       
       await batch.commit();
 
-      setClients(clients.filter((client) => client.id !== id));
       toast({
         title: 'Cliente Removido!',
         description: `${clientToDelete.name} e todas as suas parcelas foram removidos.`,
@@ -202,7 +201,7 @@ export default function ClientsPage() {
                       {client.email}
                     </div>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">
+                  <TableCell className="hidden md-table-cell">
                     {client.cpf}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
