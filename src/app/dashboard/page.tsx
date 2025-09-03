@@ -24,7 +24,7 @@ async function getDashboardData() {
         getDocs(clientsQuery),
         getDocs(installmentsQuery),
         getDocs(activeClientsQuery),
-        getDocs(paidInstallmentsSnapshot)
+        getDocs(paidInstallmentsQuery)
     ]);
 
     const totalClients = clientsSnapshot.size;
