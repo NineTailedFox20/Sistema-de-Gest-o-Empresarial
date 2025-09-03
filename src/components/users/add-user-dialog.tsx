@@ -35,6 +35,7 @@ import { PlusCircle } from 'lucide-react';
 const formSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
   email: z.string().email({ message: 'Por favor, insira um email válido.' }),
+  password: z.string().min(6, { message: 'A senha deve ter pelo menos 6 caracteres.' }),
   role: z.enum(['Dono', 'Funcionário', 'Vendedor', 'Usuário'], {
     required_error: 'O papel do usuário é obrigatório.',
   }),
@@ -54,6 +55,7 @@ export function AddUserDialog({ onAddUser }: AddUserDialogProps) {
     defaultValues: {
       name: '',
       email: '',
+      password: '',
       role: 'Usuário',
     },
   });
@@ -104,6 +106,19 @@ export function AddUserDialog({ onAddUser }: AddUserDialogProps) {
                   <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input type="email" placeholder="usuario@exemplo.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Senha</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••••" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

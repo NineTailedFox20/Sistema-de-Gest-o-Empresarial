@@ -72,7 +72,7 @@ export default function UsersPage() {
     fetchUsers();
   }, []);
 
-  const addUser = async (userData: UserFormValues) => {
+  const addUser = async (userData: Omit<UserFormValues, 'password'>) => {
     try {
       const newUser = {
         ...userData,
