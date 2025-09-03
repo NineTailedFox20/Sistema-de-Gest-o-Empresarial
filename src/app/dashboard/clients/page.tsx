@@ -43,6 +43,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, writeBatch, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { addMonths, format } from 'date-fns';
 
 export type Client = {
   id: string;
@@ -82,25 +83,51 @@ export default function ClientsPage() {
   }, [toast]);
 
   const addClient = async (clientData: ClientFormValues) => {
+    const { totalValue, numberOfInstallments, ...newClientDetails } = clientData;
+    const batch = writeBatch(db);
+
     try {
-      const newClientData = {
-        ...clientData,
-        email: `${clientData.name.toLowerCase().replace(/\s/g, '.')}@example.com`,
-        status: 'Ativo',
-        totalInstallments: 0,
-        totalValue: 0,
-      };
-      await addDoc(collection(db, 'clients'), newClientData);
-      toast({
-        title: 'Cliente Adicionado!',
-        description: `${clientData.name} foi adicionado com sucesso.`,
-      });
+        // 1. Create the client document
+        const newClientData = {
+            ...newClientDetails,
+            email: `${clientData.name.toLowerCase().replace(/\s/g, '.')}@example.com`,
+            status: 'Ativo',
+            totalInstallments: numberOfInstallments,
+            totalValue: totalValue,
+        };
+        const clientRef = doc(collection(db, 'clients'));
+        batch.set(clientRef, newClientData);
+
+        // 2. Create installment documents
+        const installmentValue = totalValue / numberOfInstallments;
+        const today = new Date();
+
+        for (let i = 0; i < numberOfInstallments; i++) {
+            const dueDate = addMonths(today, i + 1);
+            const installmentData = {
+                client: clientData.name,
+                value: installmentValue,
+                dueDate: format(dueDate, 'yyyy-MM-dd'),
+                status: 'Pendente',
+            };
+            const installmentRef = doc(collection(db, 'installments'));
+            batch.set(installmentRef, installmentData);
+        }
+
+        await batch.commit();
+
+        toast({
+            title: 'Cliente e Parcelas Adicionados!',
+            description: `${clientData.name} e ${numberOfInstallments} parcelas foram criados com sucesso.`,
+        });
+
     } catch (error) {
-      toast({
-        title: 'Erro!',
-        description: 'Não foi possível adicionar o cliente.',
-        variant: 'destructive',
-      });
+        console.error("Error adding client and installments: ", error);
+        toast({
+            title: 'Erro!',
+            description: 'Não foi possível adicionar o cliente e suas parcelas.',
+            variant: 'destructive',
+        });
     }
   };
 
