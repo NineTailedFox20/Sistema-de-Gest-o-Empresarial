@@ -41,7 +41,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export type Client = {
@@ -122,18 +122,34 @@ export default function ClientsPage() {
 
   const deleteClient = async (id: string) => {
     try {
-      const clientName = clients.find((c) => c.id === id)?.name;
-      await deleteDoc(doc(db, 'clients', id));
+      const clientToDelete = clients.find((c) => c.id === id);
+      if (!clientToDelete) return;
+
+      const batch = writeBatch(db);
+
+      // Delete the client
+      const clientRef = doc(db, 'clients', id);
+      batch.delete(clientRef);
+      
+      // Find and delete associated installments
+      const installmentsQuery = query(collection(db, 'installments'), where('client', '==', clientToDelete.name));
+      const installmentsSnapshot = await getDocs(installmentsQuery);
+      installmentsSnapshot.forEach((installmentDoc) => {
+        batch.delete(doc(db, 'installments', installmentDoc.id));
+      });
+      
+      await batch.commit();
+
       setClients(clients.filter((client) => client.id !== id));
       toast({
         title: 'Cliente Removido!',
-        description: `${clientName} foi removido com sucesso.`,
+        description: `${clientToDelete.name} e todas as suas parcelas foram removidos.`,
         variant: 'destructive',
       });
     } catch (error) {
       toast({
         title: 'Erro!',
-        description: 'Não foi possível remover o cliente.',
+        description: 'Não foi possível remover o cliente e suas parcelas.',
         variant: 'destructive',
       });
     }
