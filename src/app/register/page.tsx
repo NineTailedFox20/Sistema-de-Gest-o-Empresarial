@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Fox } from 'lucide-react';
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-secondary p-4">
       <div className="mb-8 flex items-center gap-4 text-primary">
@@ -20,13 +20,17 @@ export default function LoginPage() {
       </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="font-headline text-2xl">Login</CardTitle>
+          <CardTitle className="font-headline text-2xl">Registro</CardTitle>
           <CardDescription>
-            Entre com suas credenciais para acessar o painel.
+            Crie sua conta para começar a usar o sistema.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="full-name">Nome Completo</Label>
+              <Input id="full-name" placeholder="Seu Nome" required />
+            </div>
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -37,28 +41,17 @@ export default function LoginPage() {
               />
             </div>
             <div className="grid gap-2">
-              <div className="flex items-center">
-                <Label htmlFor="password">Senha</Label>
-                <Link
-                  href="#"
-                  className="ml-auto inline-block text-sm underline"
-                >
-                  Esqueceu sua senha?
-                </Link>
-              </div>
+              <Label htmlFor="password">Senha</Label>
               <Input id="password" type="password" required />
             </div>
             <Button asChild type="submit" className="w-full">
-              <Link href="/dashboard">Entrar</Link>
-            </Button>
-            <Button variant="outline" className="w-full">
-              Entrar com Google
+              <Link href="/dashboard">Criar Conta</Link>
             </Button>
           </div>
           <div className="mt-4 text-center text-sm">
-            Não tem uma conta?{' '}
-            <Link href="/register" className="underline">
-              Registre-se
+            Já tem uma conta?{' '}
+            <Link href="/" className="underline">
+              Login
             </Link>
           </div>
         </CardContent>
