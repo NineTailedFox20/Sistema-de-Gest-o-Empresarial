@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Card,
@@ -23,8 +24,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { MoreHorizontal } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AddInstallmentDialog } from '@/components/installments/add-installment-dialog';
 import { EditInstallmentDialog } from '@/components/installments/edit-installment-dialog';
 import {
@@ -100,9 +103,16 @@ const getStatusVariant = (status: string) => {
   }
 };
 
-export default function InstallmentsPage() {
+function InstallmentsTable() {
+  const searchParams = useSearchParams();
+  const clientFilter = searchParams.get('client');
   const [installments, setInstallments] = useState(initialInstallments);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const { toast } = useToast();
+
+  const filteredInstallments = clientFilter
+    ? installments.filter((i) => i.client === clientFilter)
+    : installments;
 
   const addInstallment = (installment: Omit<Installment, 'id'>) => {
     const newId = `PAR-${(
@@ -140,10 +150,34 @@ export default function InstallmentsPage() {
     });
   };
 
+  const handleSelectRow = (id: string) => {
+    setSelectedRows((prev) =>
+      prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+      setSelectedRows(filteredInstallments.map((i) => i.id));
+    } else {
+      setSelectedRows([]);
+    }
+  };
+
+  const isAllSelected = selectedRows.length === filteredInstallments.length && filteredInstallments.length > 0;
+  const isSomeSelected = selectedRows.length > 0 && !isAllSelected;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-headline text-3xl font-bold">Parcelas</h1>
+        <div>
+          <h1 className="font-headline text-3xl font-bold">Parcelas</h1>
+          {clientFilter && (
+            <p className="text-muted-foreground">
+              Mostrando parcelas para: <strong>{clientFilter}</strong>
+            </p>
+          )}
+        </div>
         <AddInstallmentDialog onAddInstallment={addInstallment} />
       </div>
 
@@ -158,6 +192,13 @@ export default function InstallmentsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[40px]">
+                  <Checkbox
+                    checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Selecionar tudo"
+                  />
+                </TableHead>
                 <TableHead>ID da Parcela</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
@@ -169,8 +210,18 @@ export default function InstallmentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {installments.map((installment) => (
-                <TableRow key={installment.id}>
+              {filteredInstallments.map((installment) => (
+                <TableRow
+                  key={installment.id}
+                  data-state={selectedRows.includes(installment.id) && 'selected'}
+                >
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedRows.includes(installment.id)}
+                      onCheckedChange={() => handleSelectRow(installment.id)}
+                      aria-label="Selecionar linha"
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{installment.id}</TableCell>
                   <TableCell>{installment.client}</TableCell>
                   <TableCell className="text-right">
@@ -242,4 +293,11 @@ export default function InstallmentsPage() {
       </Card>
     </div>
   );
+}
+
+
+export default function InstallmentsPage() {
+    return (
+        <InstallmentsTable />
+    )
 }
