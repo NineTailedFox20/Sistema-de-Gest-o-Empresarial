@@ -235,10 +235,10 @@ export default function ClientsPage() {
                     {client.phone}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    {client.totalInstallments}
+                    {client.totalInstallments || 0}
                   </TableCell>
                   <TableCell className="text-right">
-                    {client.totalValue.toLocaleString('pt-BR', {
+                    {(client.totalValue || 0).toLocaleString('pt-BR', {
                       style: 'currency',
                       currency: 'BRL',
                     })}
@@ -301,3 +301,5 @@ export default function ClientsPage() {
     </div>
   );
 }
+
+    
