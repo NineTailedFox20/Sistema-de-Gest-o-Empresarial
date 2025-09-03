@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AddUserDialog, UserFormValues } from '@/components/users/add-user-dialog';
 import { EditUserDialog } from '@/components/users/edit-user-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -64,7 +64,23 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const { toast } = useToast();
 
-  useEffect(() => {
+  const fetchUsers = useCallback(async () => {
+    try {
+      const q = query(collection(db, 'users'));
+      const querySnapshot = await getDocs(q);
+      const usersData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
+      setUsers(usersData);
+    } catch (error) {
+       console.error("Error fetching users:", error);
+       toast({
+          title: 'Erro ao buscar usuários!',
+          description: 'Não foi possível carregar a lista de usuários.',
+          variant: 'destructive',
+      });
+    }
+  }, [toast]);
+
+   useEffect(() => {
     const seedOwner = async () => {
       const ownerEmail = 'ufelpe7w7@gmail.com';
       const usersRef = collection(db, 'users');
@@ -73,32 +89,22 @@ export default function UsersPage() {
 
       if (querySnapshot.empty) {
         try {
-          const password = '@Felipe7w7';
-          const userCredential = await createUserWithEmailAndPassword(auth, ownerEmail, password).catch(
-            (err) => {
-              if (err.code !== 'auth/email-already-in-use') {
-                console.error("Error creating auth user for owner:", err);
-              }
-              return null;
-            }
-          );
+          // The owner user is created in Auth, but not in the users collection.
+          // This logic is simplified to just add the user to the collection
+          // assuming the auth user might already exist.
+          const newUserData: Omit<User, 'id'> = {
+            name: 'Felipe (Dono)',
+            email: ownerEmail,
+            role: 'Dono' as UserRole,
+            avatar: (Math.floor(Math.random() * 100) + 1).toString(),
+            // uid will be associated upon first login if not present
+          };
           
-          if (userCredential?.user?.uid) {
-            const newUserData: Omit<User, 'id'> = {
-              name: 'Felipe (Dono)',
-              email: ownerEmail,
-              role: 'Dono' as UserRole,
-              avatar: (Math.floor(Math.random() * 100) + 1).toString(),
-              uid: userCredential.user.uid
-            };
-            
-            const docRef = await addDoc(usersRef, newUserData);
-            setUsers(prevUsers => [...prevUsers, {id: docRef.id, ...newUserData}]);
-            toast({
-              title: 'Usuário Dono Criado!',
-              description: `O usuário Dono padrão foi configurado.`,
-            });
-          }
+          await addDoc(usersRef, newUserData);
+          toast({
+            title: 'Usuário Dono Criado!',
+            description: `O usuário Dono padrão foi configurado.`,
+          });
         } catch (error) {
             console.error("Error seeding owner in firestore: ", error);
              toast({
@@ -110,24 +116,10 @@ export default function UsersPage() {
       }
     };
     
-    const fetchUsers = async () => {
-      await seedOwner();
-      try {
-        const q = query(collection(db, 'users'));
-        const querySnapshot = await getDocs(q);
-        const usersData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
-        setUsers(usersData);
-      } catch (error) {
-         console.error("Error fetching users:", error);
-         toast({
-            title: 'Erro ao buscar usuários!',
-            description: 'Não foi possível carregar a lista de usuários.',
-            variant: 'destructive',
-        });
-      }
-    };
-    fetchUsers();
-  }, [toast]);
+    seedOwner().then(() => {
+        fetchUsers();
+    });
+  }, [fetchUsers, toast]);
 
   const addUser = async (userData: UserFormValues) => {
     try {
@@ -319,5 +311,3 @@ export default function UsersPage() {
     </div>
   );
 }
-
-    
