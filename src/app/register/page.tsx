@@ -35,20 +35,23 @@ export default function RegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Add user to 'users' collection in Firestore
-      await addDoc(collection(db, 'users'), {
-        uid: user.uid,
-        name: fullName,
-        email: email,
-        role: 'Usuário',
-        avatar: (Math.floor(Math.random() * 100) + 1).toString(),
-      });
+      if (user) {
+        // Add user to 'users' collection in Firestore
+        await addDoc(collection(db, 'users'), {
+          uid: user.uid,
+          name: fullName,
+          email: email,
+          role: 'Usuário',
+          avatar: (Math.floor(Math.random() * 100) + 1).toString(),
+        });
 
-      toast({
-        title: 'Registro Bem-sucedido!',
-        description: 'Sua conta foi criada. Você será redirecionado.',
-      });
-      router.push('/dashboard');
+        toast({
+          title: 'Registro Bem-sucedido!',
+          description: 'Sua conta foi criada. Você será redirecionado.',
+        });
+        router.push('/dashboard');
+      }
+
     } catch (err: any) {
       setError(err.message);
       toast({

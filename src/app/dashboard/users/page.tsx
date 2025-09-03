@@ -72,11 +72,6 @@ export default function UsersPage() {
 
       if (querySnapshot.empty) {
         try {
-          // Note: This only creates the user in Firestore.
-          // The auth user must be created separately through the registration flow.
-          // For this app, we'll assume the owner registers through the UI.
-          // To properly seed, you'd need a backend function.
-          // We will create the user in auth database as well to make it fully functional.
           const password = '@Felipe7w7';
           const userCredential = await createUserWithEmailAndPassword(auth, ownerEmail, password).catch(
             (err) => {
@@ -87,23 +82,22 @@ export default function UsersPage() {
             }
           );
           
-          const newUserData: { [key: string]: any } = {
-            name: 'Felipe (Dono)',
-            email: ownerEmail,
-            role: 'Dono' as UserRole,
-            avatar: (Math.floor(Math.random() * 100) + 1).toString(),
-          };
-
           if (userCredential?.user?.uid) {
-            newUserData.uid = userCredential.user.uid;
+            const newUserData: Omit<User, 'id'> & {uid: string} = {
+              name: 'Felipe (Dono)',
+              email: ownerEmail,
+              role: 'Dono' as UserRole,
+              avatar: (Math.floor(Math.random() * 100) + 1).toString(),
+              uid: userCredential.user.uid
+            };
+            
+            const docRef = await addDoc(usersRef, newUserData);
+            setUsers(prevUsers => [...prevUsers, {id: docRef.id, ...newUserData} as User]);
+            toast({
+              title: 'Usuário Dono Criado!',
+              description: `O usuário Dono padrão foi configurado.`,
+            });
           }
-          
-          const docRef = await addDoc(usersRef, newUserData);
-          setUsers(prevUsers => [...prevUsers, {id: docRef.id, ...newUserData} as User]);
-          toast({
-            title: 'Usuário Dono Criado!',
-            description: `O usuário Dono padrão foi configurado.`,
-          });
         } catch (error) {
             console.error("Error seeding owner: ", error);
              toast({
@@ -128,19 +122,21 @@ export default function UsersPage() {
   const addUser = async (userData: UserFormValues) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
-      const newUser = {
-        name: userData.name,
-        email: userData.email,
-        role: userData.role,
-        avatar: (Math.floor(Math.random() * 100) + 1).toString(),
-        uid: userCredential.user.uid,
-      };
-      const docRef = await addDoc(collection(db, 'users'), newUser);
-      setUsers([...users, { id: docRef.id, ...newUser }]);
-      toast({
-        title: 'Usuário Adicionado!',
-        description: `${newUser.name} foi adicionado ao sistema.`,
-      });
+      if (userCredential.user) {
+        const newUser = {
+          name: userData.name,
+          email: userData.email,
+          role: userData.role,
+          avatar: (Math.floor(Math.random() * 100) + 1).toString(),
+          uid: userCredential.user.uid,
+        };
+        const docRef = await addDoc(collection(db, 'users'), newUser);
+        setUsers([...users, { id: docRef.id, ...newUser }]);
+        toast({
+          title: 'Usuário Adicionado!',
+          description: `${newUser.name} foi adicionado ao sistema.`,
+        });
+      }
     } catch (error: any) {
       let errorMessage = 'Não foi possível adicionar o usuário.';
       if (error.code === 'auth/email-already-in-use') {
