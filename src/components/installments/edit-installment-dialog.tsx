@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -63,8 +64,12 @@ export function EditInstallmentDialog({
     resolver: zodResolver(formSchema),
     // We add a one-day offset to the date to fix a timezone issue
     defaultValues: {
-      ...installment,
-      dueDate: new Date(installment.dueDate + 'T00:00:00'),
+      client: installment.client || '',
+      value: installment.value || 0,
+      status: installment.status || 'Pendente',
+      dueDate: installment.dueDate
+        ? new Date(installment.dueDate + 'T00:00:00')
+        : new Date(),
     },
   });
 
@@ -116,7 +121,12 @@ export function EditInstallmentDialog({
                 <FormItem>
                   <FormLabel>Valor</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="150.00" {...field} />
+                    <Input
+                      type="number"
+                      placeholder="150.00"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

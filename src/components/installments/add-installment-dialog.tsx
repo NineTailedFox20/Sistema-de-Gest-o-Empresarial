@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,8 @@ export function AddInstallmentDialog({
     resolver: zodResolver(formSchema),
     defaultValues: {
       client: '',
+      value: 0,
+      dueDate: new Date(),
       status: 'Pendente',
     },
   });
@@ -115,7 +118,12 @@ export function AddInstallmentDialog({
                 <FormItem>
                   <FormLabel>Valor</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="150.00" {...field} />
+                    <Input
+                      type="number"
+                      placeholder="150.00"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
