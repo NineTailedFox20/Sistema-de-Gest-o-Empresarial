@@ -1,4 +1,3 @@
-
 'use client';
 import {
   Card,
@@ -19,16 +18,15 @@ import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MoreHorizontal } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AddInstallmentDialog } from '@/components/installments/add-installment-dialog';
+import { AddInstallmentDialog, AddInstallmentForm } from '@/components/installments/add-installment-dialog';
 import { EditInstallmentDialog } from '@/components/installments/edit-installment-dialog';
 import {
   AlertDialog,
@@ -93,9 +91,9 @@ export type Installment = typeof initialInstallments[0];
 const getStatusVariant = (status: string) => {
   switch (status) {
     case 'Pago':
-      return 'default';
-    case 'Pendente':
       return 'secondary';
+    case 'Pendente':
+      return 'default';
     case 'Não Pago':
       return 'destructive';
     default:
@@ -114,16 +112,23 @@ function InstallmentsTable() {
     ? installments.filter((i) => i.client === clientFilter)
     : installments;
 
-  const addInstallment = (installment: Omit<Installment, 'id'>) => {
-    const newId = `PAR-${(
-      Math.max(...installments.map((i) => parseInt(i.id.split('-')[1]))) + 1
+  const addInstallment = (installmentData: AddInstallmentForm) => {
+     const newId = `PAR-${(
+      Math.max(0, ...installments.map((i) => parseInt(i.id.split('-')[1]))) + 1
     )
       .toString()
       .padStart(3, '0')}`;
-    setInstallments([...installments, { id: newId, ...installment }]);
+      
+    const newInstallment: Installment = {
+        id: newId,
+        ...installmentData,
+        dueDate: installmentData.dueDate.toISOString().split('T')[0],
+    };
+
+    setInstallments([...installments, newInstallment]);
     toast({
       title: 'Parcela Adicionada!',
-      description: `A parcela para ${installment.client} foi adicionada.`,
+      description: `A parcela para ${newInstallment.client} foi adicionada.`,
     });
   };
 
@@ -142,10 +147,11 @@ function InstallmentsTable() {
   };
 
   const deleteInstallment = (id: string) => {
+    const installmentClient = installments.find(i => i.id === id)?.client;
     setInstallments(installments.filter((installment) => installment.id !== id));
     toast({
       title: 'Parcela Removida!',
-      description: `A parcela ${id} foi removida com sucesso.`,
+      description: `A parcela de ${installmentClient} foi removida com sucesso.`,
       variant: 'destructive',
     });
   };

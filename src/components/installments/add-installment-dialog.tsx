@@ -11,7 +11,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { PlusCircle } from 'lucide-react';
 import {
   Form,
@@ -32,7 +31,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState } from 'react';
-import type { Installment } from '@/app/dashboard/installments/page';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '../ui/calendar';
@@ -48,10 +46,10 @@ const formSchema = z.object({
   status: z.enum(['Pago', 'Pendente', 'Não Pago']),
 });
 
-type AddInstallmentForm = z.infer<typeof formSchema>;
+export type AddInstallmentForm = z.infer<typeof formSchema>;
 
 interface AddInstallmentDialogProps {
-  onAddInstallment: (installment: Omit<Installment, 'id'>) => void;
+  onAddInstallment: (installment: AddInstallmentForm) => void;
 }
 
 export function AddInstallmentDialog({
@@ -68,10 +66,7 @@ export function AddInstallmentDialog({
   });
 
   function onSubmit(values: AddInstallmentForm) {
-    onAddInstallment({
-        ...values,
-        dueDate: values.dueDate.toISOString().split('T')[0],
-    });
+    onAddInstallment(values);
     setOpen(false);
     form.reset();
   }

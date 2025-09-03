@@ -11,7 +11,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Form,
   FormControl,
@@ -37,7 +36,6 @@ import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { DropdownMenuItem } from '../ui/dropdown-menu';
 
 const formSchema = z.object({
   client: z.string().min(2, { message: 'O nome do cliente é obrigatório.' }),
@@ -63,9 +61,10 @@ export function EditInstallmentDialog({
 
   const form = useForm<EditInstallmentForm>({
     resolver: zodResolver(formSchema),
+    // We add a one-day offset to the date to fix a timezone issue
     defaultValues: {
       ...installment,
-      dueDate: new Date(installment.dueDate),
+      dueDate: new Date(installment.dueDate + 'T00:00:00'),
     },
   });
 
@@ -89,7 +88,7 @@ export function EditInstallmentDialog({
             Editar Parcela
           </DialogTitle>
           <DialogDescription>
-            Atualize as informações da parcela.
+            Atualize as informações da parcela {installment.id}.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
